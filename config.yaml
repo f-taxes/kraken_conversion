@@ -1,0 +1,4 @@
+historicDataArchive:
+  enabled: true
+  path: "./archive"
+skipApi: true
