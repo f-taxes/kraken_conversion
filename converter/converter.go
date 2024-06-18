@@ -89,6 +89,10 @@ func fromArchiveFile(asset, targetCurrency string, ts time.Time) decimal.Decimal
 		targetCurrency = a
 	}
 
+	if asset == "BTC" {
+		asset = "XBT"
+	}
+
 	archivePath := filepath.Join(conf.App.String("historicDataArchive.path"), fmt.Sprintf("%s%s_1.csv", asset, targetCurrency))
 
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {

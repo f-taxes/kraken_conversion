@@ -20,40 +20,60 @@ func (s *PluginCtl) ConvertPricesInTrade(ctx context.Context, job *pb.TradeConve
 		job.Trade.FeeC = job.Trade.Fee
 		job.Trade.FeePriceC = "1"
 		job.Trade.FeeConvertedBy = global.Plugin.ID
+	} else {
+		feePrice, err := converter.PriceAtTime(job.Trade.FeeCurrency, job.TargetCurrency, job.Trade.Ts.AsTime())
+		if err != nil {
+			return nil, err
+		}
+
+		job.Trade.FeePriceC = feePrice.String()
+
+		if !feePrice.IsZero() {
+			job.Trade.FeeC = global.StrToDecimal(job.Trade.Fee).Mul(feePrice).String()
+			job.Trade.FeeConvertedBy = global.Plugin.ID
+		}
+	}
+
+	if job.Trade.QuoteFeeCurrency == job.TargetCurrency {
+		job.Trade.QuoteFeeC = job.Trade.Fee
+		job.Trade.QuoteFeePriceC = "1"
+		job.Trade.QuoteFeeConvertedBy = global.Plugin.ID
+	} else {
+		quoteFeePrice, err := converter.PriceAtTime(job.Trade.QuoteFeeCurrency, job.TargetCurrency, job.Trade.Ts.AsTime())
+		if err != nil {
+			return nil, err
+		}
+
+		job.Trade.QuoteFeePriceC = quoteFeePrice.String()
+
+		if !quoteFeePrice.IsZero() {
+			job.Trade.QuoteFeeC = global.StrToDecimal(job.Trade.QuoteFee).Mul(quoteFeePrice).String()
+			job.Trade.QuoteFeeConvertedBy = global.Plugin.ID
+		}
 	}
 
 	if job.Trade.Quote == job.TargetCurrency {
 		job.Trade.PriceC = job.Trade.Price
+		job.Trade.QuotePriceC = "1"
 		job.Trade.PriceConvertedBy = global.Plugin.ID
-		return job.Trade, nil
-	}
+	} else {
+		priceC, err := converter.PriceAtTime(job.Trade.Asset, job.TargetCurrency, job.Trade.Ts.AsTime())
+		if err != nil {
+			return nil, err
+		}
 
-	price, err := converter.PriceAtTime(job.Trade.Asset, job.TargetCurrency, job.Trade.Ts.AsTime())
-	if err != nil {
-		return nil, err
-	}
+		quotePrice, err := converter.PriceAtTime(job.Trade.Quote, job.TargetCurrency, job.Trade.Ts.AsTime())
+		if err != nil {
+			return nil, err
+		}
 
-	job.Trade.PriceC = price.String()
-	job.Trade.ValueC = price.Mul(global.StrToDecimal(job.Trade.Amount)).String()
+		job.Trade.PriceC = priceC.String()
+		job.Trade.ValueC = priceC.Mul(global.StrToDecimal(job.Trade.Amount)).String()
+		job.Trade.QuotePriceC = quotePrice.String()
 
-	if !price.IsZero() {
-		job.Trade.PriceConvertedBy = global.Plugin.ID
-	}
-
-	feePrice, err := converter.PriceAtTime(job.Trade.FeeCurrency, job.TargetCurrency, job.Trade.Ts.AsTime())
-	if err != nil {
-		return nil, err
-	}
-
-	if price.IsZero() {
-		return job.Trade, nil
-	}
-
-	job.Trade.FeePriceC = feePrice.String()
-	job.Trade.FeeC = global.StrToDecimal(job.Trade.Fee).Mul(feePrice).String()
-
-	if !feePrice.IsZero() {
-		job.Trade.FeeConvertedBy = global.Plugin.ID
+		if !priceC.IsZero() {
+			job.Trade.PriceConvertedBy = global.Plugin.ID
+		}
 	}
 
 	return job.Trade, nil
